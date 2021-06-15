@@ -17,9 +17,9 @@ import warnings;
 warnings.filterwarnings('ignore')
 
 #Dataset
-! wget http://vis-www.cs.umass.edu/lfw/lfw.tgz
-! tar -xvzf lfw.tgz
+
 face_images = glob.glob('lfw/**/*.jpg')
+
 #Load and preprocess images
 all_images=[]
 for i in tqdm(face_images):
@@ -70,11 +70,29 @@ for i in range(val_x.shape[0]):
 
 val_x_px = np.array(val_x_px)
 
+Input_img = Input(shape=(80, 80, 3))  
+    
+#encoding architecture
+x1 = Conv2D(256, (3, 3), activation='relu', padding='same')(Input_img)
+x2 = Conv2D(128, (3, 3), activation='relu', padding='same')(x1)
+x2 = MaxPool2D( (2, 2))(x2)
+encoded = Conv2D(64, (3, 3), activation='relu', padding='same')(x2)
+
+# decoding architecture
+x3 = Conv2D(64, (3, 3), activation='relu', padding='same')(encoded)
+x3 = UpSampling2D((2, 2))(x3)
+x2 = Conv2D(128, (3, 3), activation='relu', padding='same')(x3)
+x1 = Conv2D(256, (3, 3), activation='relu', padding='same')(x2)
+decoded = Conv2D(3, (3, 3), padding='same')(x1)
+
+autoencoder = Model(Input_img, decoded)
+autoencoder.compile(optimizer='adam', loss='mse')
+
 #Train model
 early_stopper = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=4, verbose=1, mode='auto')
 
 a_e = autoencoder.fit(train_x_px, train_x,
-            epochs=10,
+            epochs=1,
             batch_size=256,
             shuffle=True,
             validation_data=(val_x_px, val_x),
